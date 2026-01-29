@@ -14,7 +14,9 @@ import java.util.UUID;
 @NoArgsConstructor
 @Data
 @Builder
-@Table(name = "product_table")
+@Table(name = "product_table", indexes = {
+        @Index(name = "indexName", columnList = "name")
+})
 public class ProductEntity {
 
     @Id

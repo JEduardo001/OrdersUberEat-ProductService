@@ -1,6 +1,7 @@
 package com.SoftwareOrdersUberEats.productService.exception.exceptionHandler;
 
 import com.SoftwareOrdersUberEats.productService.dto.apiResponse.DtoResponseApiWithoutData;
+import com.SoftwareOrdersUberEats.productService.exception.product.NameProductAlreadyExistException;
 import com.SoftwareOrdersUberEats.productService.exception.product.ProductNotFoundException;
 import com.SoftwareOrdersUberEats.productService.exception.product.ProductOutOfStockException;
 import org.springframework.core.annotation.Order;
@@ -30,5 +31,10 @@ public class ProductExceptionHandler {
     @ExceptionHandler(ProductOutOfStockException.class)
     public ResponseEntity<DtoResponseApiWithoutData> productOutOfStockException(ProductOutOfStockException ex){
         return buildResponse(HttpStatus.CONFLICT, "There is not enough stock of the product");
+    }
+
+    @ExceptionHandler(NameProductAlreadyExistException.class)
+    public ResponseEntity<DtoResponseApiWithoutData> NameProductAlreadyExistException(NameProductAlreadyExistException ex){
+        return buildResponse(HttpStatus.CONFLICT, "Name product already in use");
     }
 }
