@@ -1,18 +1,24 @@
 package com.SoftwareOrdersUberEats.productService.service;
 
+import com.SoftwareOrdersUberEats.productService.dto.apiResponse.DtoPageableResponse;
 import com.SoftwareOrdersUberEats.productService.dto.order.DtoCreateOrder;
 import com.SoftwareOrdersUberEats.productService.dto.product.DtoCreateProduct;
 import com.SoftwareOrdersUberEats.productService.dto.product.DtoProduct;
 import com.SoftwareOrdersUberEats.productService.dto.product.DtoProductsOrder;
+import com.SoftwareOrdersUberEats.productService.dto.product.DtoUpdateProduct;
 import com.SoftwareOrdersUberEats.productService.entities.ProductEntity;
 import com.SoftwareOrdersUberEats.productService.enums.statusCreateResource.ResultEventEnum;
 
+import com.SoftwareOrdersUberEats.productService.exception.product.NameProductAlreadyExistException;
+import com.SoftwareOrdersUberEats.productService.exception.product.ProductNotFoundException;
 import com.SoftwareOrdersUberEats.productService.interfaces.IProductService;
 import com.SoftwareOrdersUberEats.productService.mapper.ProductMapper;
 import com.SoftwareOrdersUberEats.productService.repository.ProductRepository;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,13 +38,42 @@ public class ProductService implements IProductService {
     private Validator validator;
     private ProductMapper productMapper;
 
-    public List<ProductEntity> getAll(){
-        return productRepository.findAll();
+    @Override
+    public DtoPageableResponse getAll(int page,int size){
+        Page<ProductEntity> products = productRepository.findAll(PageRequest.of(page,size));
+        List<DtoProduct> listProducts = products.get().map(productMapper::toDto).collect(Collectors.toList());
+        return new DtoPageableResponse(
+                products.getTotalElements(),
+                products.getTotalPages(),
+                listProducts
+        );
     }
+
+    @Override
+    public DtoProduct get(UUID id){
+        return productMapper.toDto(productRepository.findById(id).orElseThrow(ProductNotFoundException::new));
+    }
+
+    @Override
+    public DtoProduct update(DtoUpdateProduct request){
+        ProductEntity actualProduct = productRepository.findById(request.getId()).orElseThrow(ProductNotFoundException::new);
+
+        if(productRepository.existsByNameAndIdNot(request.getName(),request.getId())){
+            throw new NameProductAlreadyExistException();
+        }
+
+        productMapper.updateProduct(request,actualProduct);
+        return productMapper.toDto(productRepository.save(actualProduct));
+    }
+
 
     @Override
     @Transactional
     public DtoProduct create(DtoCreateProduct request){
+
+        if(productRepository.existsByName(request.getName())){
+            throw new NameProductAlreadyExistException();
+        }
 
         ProductEntity product = productMapper.toEntity(request);
         product.setCreateAt(Instant.now());
@@ -106,9 +141,6 @@ public class ProductService implements IProductService {
                 product.setStock(product.getStock() + product.getStock());
             }
         }
-
         productRepository.saveAll(products);
     }
-
-
 }
