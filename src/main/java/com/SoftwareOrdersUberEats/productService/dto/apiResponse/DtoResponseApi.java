@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class DtoResponseApi<T> {
     private Integer status;
+    private String idCorrelation;
     private String message;
     private T data;
 }

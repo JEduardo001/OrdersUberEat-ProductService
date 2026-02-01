@@ -25,6 +25,7 @@ public class OutboxEventEntity {
     private String nameTopic;
     @Column(columnDefinition = "TEXT")
     private String payload;
+    private String correlationId;
     @Enumerated(EnumType.STRING)
     private TypeEventEnum typeEvent;
     @Enumerated(EnumType.STRING)

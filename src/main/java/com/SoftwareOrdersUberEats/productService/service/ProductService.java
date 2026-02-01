@@ -17,6 +17,7 @@ import com.SoftwareOrdersUberEats.productService.repository.ProductRepository;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -30,8 +31,11 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static com.SoftwareOrdersUberEats.productService.constant.TracerConstants.*;
+
 @Service
 @AllArgsConstructor
+@Slf4j
 public class ProductService implements IProductService {
 
     private ProductRepository productRepository;
@@ -63,7 +67,9 @@ public class ProductService implements IProductService {
         }
 
         productMapper.updateProduct(request,actualProduct);
-        return productMapper.toDto(productRepository.save(actualProduct));
+        ProductEntity product = productRepository.save(actualProduct);
+        log.info(MESSAGE_UPDATE_PRODUCT);
+        return productMapper.toDto(product);
     }
 
 
@@ -89,6 +95,7 @@ public class ProductService implements IProductService {
 
         Set<ConstraintViolation<DtoCreateOrder>> violations = validator.validate(request);
         if (!violations.isEmpty()) {
+            log.info(MESSAGE_DATA_VALIDATION_VERIFY_STOCK_ERROR);
             return ResultEventEnum.VALIDATION_ERROR;
         }
 
@@ -109,10 +116,10 @@ public class ProductService implements IProductService {
                return ResultEventEnum.NOT_FOUND_PRODUCT;
             }
 
+
             if (product.getStock() < dto.getQuantityProducts()) {
                 return ResultEventEnum.OUT_OF_STOCK;
             }
-
             product.setStock(product.getStock() - dto.getQuantityProducts());
         }
 
@@ -142,5 +149,6 @@ public class ProductService implements IProductService {
             }
         }
         productRepository.saveAll(products);
+        log.info(MESSAGE_REVERSED_STOCK);
     }
 }

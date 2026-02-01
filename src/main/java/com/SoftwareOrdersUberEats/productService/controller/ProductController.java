@@ -2,9 +2,9 @@ package com.SoftwareOrdersUberEats.productService.controller;
 
 import com.SoftwareOrdersUberEats.productService.constant.ApiBase;
 import com.SoftwareOrdersUberEats.productService.dto.apiResponse.DtoResponseApi;
-import com.SoftwareOrdersUberEats.productService.dto.order.DtoCreateOrder;
 import com.SoftwareOrdersUberEats.productService.dto.product.DtoCreateProduct;
 import com.SoftwareOrdersUberEats.productService.dto.product.DtoUpdateProduct;
+import com.SoftwareOrdersUberEats.productService.service.MappedDiagnosticService;
 import com.SoftwareOrdersUberEats.productService.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -20,6 +20,7 @@ import java.util.UUID;
 public class ProductController {
 
     private final ProductService productService;
+    private final MappedDiagnosticService mappedDiagnosticService;
 
 
     @GetMapping
@@ -27,6 +28,7 @@ public class ProductController {
                                                         @RequestParam(defaultValue = "10") int size){
         return ResponseEntity.status(HttpStatus.OK).body(DtoResponseApi.builder()
                 .status(HttpStatus.OK.value())
+                .idCorrelation(mappedDiagnosticService.getIdCorrelation())
                 .message("Products obtained")
                 .data(productService.getAll(page,size))
                 .build()
@@ -37,6 +39,7 @@ public class ProductController {
     public ResponseEntity<DtoResponseApi> getProduct(@PathVariable UUID idProduct){
         return ResponseEntity.status(HttpStatus.OK).body(DtoResponseApi.builder()
                 .status(HttpStatus.OK.value())
+                .idCorrelation(mappedDiagnosticService.getIdCorrelation())
                 .message("Product obtained")
                 .data(productService.get(idProduct))
                 .build()
@@ -47,6 +50,7 @@ public class ProductController {
     public ResponseEntity<DtoResponseApi> getProduct(@Valid @RequestBody DtoUpdateProduct request){
         return ResponseEntity.status(HttpStatus.OK).body(DtoResponseApi.builder()
                 .status(HttpStatus.OK.value())
+                .idCorrelation(mappedDiagnosticService.getIdCorrelation())
                 .message("Product updated")
                 .data(productService.update(request))
                 .build()
@@ -57,7 +61,8 @@ public class ProductController {
     public ResponseEntity<DtoResponseApi> createProduct(@Valid @RequestBody DtoCreateProduct request){
         return ResponseEntity.status(HttpStatus.CREATED).body(DtoResponseApi.builder()
                         .status(HttpStatus.CREATED.value())
-                        .message("requested order")
+                .idCorrelation(mappedDiagnosticService.getIdCorrelation())
+                .message("requested order")
                         .data(productService.create(request))
                 .build()
         );
