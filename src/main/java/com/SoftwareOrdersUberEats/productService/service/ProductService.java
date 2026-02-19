@@ -84,47 +84,49 @@ public class ProductService implements IProductService {
         ProductEntity product = productMapper.toEntity(request);
         product.setCreateAt(Instant.now());
 
-        productRepository.save(product);
-
-        return productMapper.toDto(product);
+        ProductEntity savedProduct = productRepository.save(product);
+        return productMapper.toDto(savedProduct);
     }
 
     @Override
     @Transactional
     public ResultEventEnum verifyProductStock(DtoCreateOrder request) {
 
-        Set<ConstraintViolation<DtoCreateOrder>> violations = validator.validate(request);
-        if (!violations.isEmpty()) {
-            log.info(MESSAGE_DATA_VALIDATION_VERIFY_STOCK_ERROR);
-            return ResultEventEnum.VALIDATION_ERROR;
-        }
 
-        List<UUID> ids = request.getProducts()
-                .stream()
-                .map(DtoProductsOrder::getIdProduct)
-                .toList();
+          Set<ConstraintViolation<DtoCreateOrder>> violations = validator.validate(request);
+          if (!violations.isEmpty()) {
+              log.info(MESSAGE_DATA_VALIDATION_VERIFY_STOCK_ERROR);
+              return ResultEventEnum.VALIDATION_ERROR;
+          }
 
-        List<ProductEntity> products = productRepository.findAllById(ids);
+          List<UUID> ids = request.getProducts()
+                  .stream()
+                  .map(DtoProductsOrder::getIdProduct)
+                  .toList();
 
-        Map<UUID, ProductEntity> productMap = products.stream()
-                .collect(Collectors.toMap(ProductEntity::getId, Function.identity()));
+          List<ProductEntity> products = productRepository.findAllById(ids);
 
-        for (DtoProductsOrder dto : request.getProducts()) {
-            ProductEntity product = productMap.get(dto.getIdProduct());
+          Map<UUID, ProductEntity> productMap = products.stream()
+                  .collect(Collectors.toMap(ProductEntity::getId, Function.identity()));
 
-            if (product == null) {
-               return ResultEventEnum.NOT_FOUND_PRODUCT;
-            }
+          for (DtoProductsOrder dto : request.getProducts()) {
+              ProductEntity product = productMap.get(dto.getIdProduct());
+
+              if (product == null) {
+                  return ResultEventEnum.NOT_FOUND_PRODUCT;
+              }
 
 
-            if (product.getStock() < dto.getQuantityProducts()) {
-                return ResultEventEnum.OUT_OF_STOCK;
-            }
-            product.setStock(product.getStock() - dto.getQuantityProducts());
-        }
+              if (product.getStock() < dto.getQuantityProducts()) {
+                  return ResultEventEnum.OUT_OF_STOCK;
+              }
+              product.setStock(product.getStock() - dto.getQuantityProducts());
+          }
 
-        productRepository.saveAll(products);
-        return ResultEventEnum.UPDATED;
+          productRepository.saveAll(products);
+          return ResultEventEnum.UPDATED;
+
+
     }
 
     @Override

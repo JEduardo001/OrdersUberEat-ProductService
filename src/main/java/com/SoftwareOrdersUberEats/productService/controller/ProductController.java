@@ -62,7 +62,7 @@ public class ProductController {
         return ResponseEntity.status(HttpStatus.CREATED).body(DtoResponseApi.builder()
                         .status(HttpStatus.CREATED.value())
                 .idCorrelation(mappedDiagnosticService.getIdCorrelation())
-                .message("requested order")
+                .message("Product created")
                         .data(productService.create(request))
                 .build()
         );

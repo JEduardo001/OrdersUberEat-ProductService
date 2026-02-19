@@ -10,21 +10,23 @@ import com.SoftwareOrdersUberEats.productService.service.OutBoxEventService;
 import com.SoftwareOrdersUberEats.productService.service.ProcessedEventService;
 import com.SoftwareOrdersUberEats.productService.service.ProductService;
 import lombok.AllArgsConstructor;
-import org.slf4j.MDC;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
+import static com.SoftwareOrdersUberEats.productService.constant.TracerConstants.*;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import static com.SoftwareOrdersUberEats.productService.constant.TracerConstants.CORRELATION_HEADER;
-import static org.springframework.kafka.support.KafkaHeaders.CORRELATION_ID;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class Consumer implements IConsumer {
 
     private final ProductService productService;
@@ -48,56 +50,67 @@ public class Consumer implements IConsumer {
         processedEventService.save(id);
     }
 
+    private void createEvent(DtoEvent<DtoCreateOrder> request, String topic, ResultEventEnum result ){
+        request.getData().setResultEvent(result);
+        DtoEvent<DtoCreateOrder> event = DtoEvent.<DtoCreateOrder>builder()
+                .data(request.getData())
+                .idEvent(request.getIdEvent())
+                .correlationId(mappedDiagnosticService.getIdCorrelation())
+                .createAt(request.getCreateAt())
+                .typeEvent(TypeEventEnum.UPDATE)
+                .build();
 
-    @KafkaListener(topics = "order.created.pending", groupId = "orders")
+        outboxEventService.saveEvent(event, topic);
+    }
+
+    @KafkaListener(topics = "dev.order-ms.order-created-pending.v1", groupId = "order-ms.order-created-pending.v1")
     @Transactional
     @Override
     public void handleVerifyProductStock(String rawEvent, @Header(CORRELATION_HEADER) String correlationId) {
-        System.out.println("xxx " + correlationId);
 
-        //mappedDiagnosticService.setIdCorrelation(correlationId);
-       String json = parseRawEvent(rawEvent);
 
-       DtoEvent<DtoCreateOrder> dto = new ObjectMapper().readValue(
-               json,
-               new TypeReference<DtoEvent<DtoCreateOrder>>() {}
-       );
+            String json = parseRawEvent(rawEvent);
 
-       if(isEventProcessed(dto.getIdEvent())){
-           return;
-       }
+            DtoEvent<DtoCreateOrder> dto = new ObjectMapper().readValue(
+                    json,
+                    new TypeReference<>() {}
+            );
 
-       ResultEventEnum result = productService.verifyProductStock(dto.getData());
-       String  topic = "inventory.stock.reserved";
+            if(isEventProcessed(dto.getIdEvent())){
+                return;
+            }
 
-       if(result != ResultEventEnum.UPDATED){
-           topic = "inventory.stock.reserved.failed";
-       }
+            Instant dateCreateOrder = dto.getCreateAt();
+            Instant limitDate = dateCreateOrder.plusSeconds(86400); // 24 hours limit
+            String topicFailed = "dev.product-ms.inventory-stock-reserved-failed.v1";
+            if (Instant.now().isAfter(limitDate)) {
+                log.info(MESSAGE_ORDER_TIME_LIMIT_EXCEEDED, dto.getCorrelationId());
+                createEvent(dto,topicFailed,ResultEventEnum.TIME_LIMIT_EXCEEDED_TO_PROCESS);
+                saveEventProcessed(dto.getIdEvent());
+                return;
+            }
 
-       dto.getData().setResultEvent(result);
-       DtoEvent<DtoCreateOrder> event = DtoEvent.<DtoCreateOrder>builder()
-               .data(dto.getData())
-               .idEvent(dto.getIdEvent())
-               .correlationId(mappedDiagnosticService.getIdCorrelation())
-               .typeEvent(TypeEventEnum.UPDATE)
-               .build();
+            ResultEventEnum result = productService.verifyProductStock(dto.getData());
 
-       outboxEventService.saveEvent(event, topic);
-       saveEventProcessed(dto.getIdEvent());
+            if(result != ResultEventEnum.UPDATED){
+                createEvent(dto,topicFailed, result);
+            }else{
+                createEvent(dto,"dev.product-ms.inventory-stock.reserved.v1", result);
+            }
 
+            saveEventProcessed(dto.getIdEvent());
     }
 
-    @KafkaListener(topics = "changed.status.order.failed", groupId = "orders")
+    @KafkaListener(topics = "dev.order-ms.changed-status-order-failed.v1", groupId = "order-ms.changed-status-order-failed.v1")
     @Transactional
     @Override
     public void handleRevertStockProducts(String rawEvent,@Header(CORRELATION_HEADER) String correlationId) {
-        //mappedDiagnosticService.setIdCorrelation(correlationId);
 
         String json = parseRawEvent(rawEvent);
 
         DtoEvent<DtoCreateOrder> dto = new ObjectMapper().readValue(
                 json,
-                new TypeReference<DtoEvent<DtoCreateOrder>>() {}
+                new TypeReference<>() {}
         );
 
         if(isEventProcessed(dto.getIdEvent())){

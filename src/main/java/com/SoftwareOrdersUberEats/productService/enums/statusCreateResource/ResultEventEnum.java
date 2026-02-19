@@ -5,7 +5,8 @@ public enum ResultEventEnum {
     OUT_OF_STOCK,
     VALIDATION_ERROR,
     NOT_FOUND_PRODUCT,
-    CREATED
+    CREATED,
+    TIME_LIMIT_EXCEEDED_TO_PROCESS
 
 }
 

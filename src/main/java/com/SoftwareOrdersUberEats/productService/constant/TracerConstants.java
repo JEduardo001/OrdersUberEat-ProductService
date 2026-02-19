@@ -12,6 +12,7 @@ public class TracerConstants {
     public static final String MESSAGE_SEND_EVENT = "Send event id event{}";
     public static final String MESSAGE_DATA_VALIDATION_VERIFY_STOCK_ERROR = "Error data validate to verify product stock";
     public static final String MESSAGE_UPDATE_PRODUCT = "Update product";
+    public static final String MESSAGE_ORDER_TIME_LIMIT_EXCEEDED = "Time limit exceeded to process order";
 
     //EXCEPTION
     public static final String EXCEPTION_ALREADY_EVENT_PROCESSED = "Exception already event processed {}";

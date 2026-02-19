@@ -25,6 +25,8 @@ public class ProductEntity {
     private String name;
     private String description;
     private Integer stock;
+    @Version()
+    private Long version;
     private Instant createAt;
     private Instant deletedAt;
 
